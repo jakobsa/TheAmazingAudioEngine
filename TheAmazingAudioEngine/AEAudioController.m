@@ -1843,7 +1843,7 @@ BOOL AECurrentThreadIsAudioThread(void) {
     int options = 0;
     
     if ( [_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord] ) {
-        options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
+        //options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
     }
     
     options |= _enableBluetoothInput ? AVAudioSessionCategoryOptionAllowBluetooth : 0;
