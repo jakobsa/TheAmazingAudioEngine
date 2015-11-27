@@ -36,11 +36,23 @@ freely, subject to the following restrictions:
 Changelog
 ---------
 
-### In-Development: 1.5.3 (master branch)
+### 1.5.4
+
+- Fixed an output latency compensation issue when hosted via Inter-App Audio
+- Deprecated "audiobusSenderPort" facility (use ABSenderPort's audioUnit initializer instead, with AEAudioController's audioUnit property)
+- Improved performance reports (made these less verbose, added percentage of render budget)
+- Fixed a crash when using AEPlaythroughChannel and changing the sample rate
+
+### 1.5.3
 
 - Added AEAudioBufferListCreateOnStack utility
 - Enable automaticLatencyManagement by default
 - Fixed a race condition when using setAudiobusSenderPort*
+- Added tvOS support (thanks to Florian Doyon)
+- Added playAtTime: facility to AEMemoryBufferPlayer (thanks to Anton Holmberg)
+- Added setup/teardown methods to AEInputReceiver
+- Fixed missing setup/teardown calls to input filters
+- Replaced AEPlaythroughChannel initializer
 
 ### 1.5.2
 
