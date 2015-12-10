@@ -598,15 +598,16 @@ static void serviceAudioInput(__unsafe_unretained AEAudioController * THIS, cons
     if ( useAudiobusReceiverPort ) {
         // If Audiobus is connected, then serve Audiobus queue rather than serving system input queue
         timestamp = outputBusTimeStamp ? *outputBusTimeStamp : *inputBusTimeStamp;
-#if TARGET_OS_IPHONE
-        if ( outputBusTimeStamp && THIS->_automaticLatencyManagement ) {
-            // Adjust timestamp to factor in hardware output latency
-            timestamp.mHostTime += AEHostTicksFromSeconds(AEAudioControllerOutputLatency(THIS));
-        }
-#endif
         static Float64 __sampleTime = 0;
         ABReceiverPortReceive(THIS->_audiobusReceiverPort, nil, THIS->_inputAudioBufferList, inNumberFrames, &timestamp);
         timestamp.mSampleTime = __sampleTime;
+#if TARGET_OS_IPHONE
+        if ( outputBusTimeStamp && THIS->_automaticLatencyManagement ) {
+            // Adjust timestamp to factor in hardware output latency. Note that we do this after
+            // ABReceiverPortReceive, which needs an uncompensated audio timestamp
+            timestamp.mHostTime += AEHostTicksFromSeconds(AEAudioControllerOutputLatency(THIS));
+        }
+#endif
         __sampleTime += inNumberFrames;
     } else {
         timestamp = *inputBusTimeStamp;
@@ -2051,14 +2052,6 @@ NSTimeInterval AEAudioControllerInputLatency(__unsafe_unretained AEAudioControll
 }
 
 NSTimeInterval AEAudioControllerOutputLatency(__unsafe_unretained AEAudioController *THIS) {
-    UInt32 iaaConnected;
-    UInt32 size = sizeof(iaaConnected);
-    if ( AECheckOSStatus(AudioUnitGetProperty(THIS->_ioAudioUnit, kAudioUnitProperty_IsInterAppConnected,
-                                              kAudioUnitScope_Global, 0, &iaaConnected, &size), "AudioUnitGetProperty")
-            && iaaConnected ) {
-        // If the node is being hosted over IAA, then don't do any output latency compensation
-        return 0.0;
-    }
     
     if ( AECurrentThreadIsAudioThread() ) {
         AEChannelRef channelBeingRendered = THIS->_channelBeingRendered;
@@ -2445,12 +2438,13 @@ AudioTimeStamp AEAudioControllerCurrentAudioTimestamp(__unsafe_unretained AEAudi
 
 #if TARGET_OS_IPHONE
 static void interAppConnectedChangeCallback(void *inRefCon, AudioUnit inUnit, AudioUnitPropertyID inID, AudioUnitScope inScope, AudioUnitElement inElement) {
-    @autoreleasepool {
+    dispatch_async(dispatch_get_main_queue(), ^{
         AEAudioController *THIS = (__bridge AEAudioController*)inRefCon;
         
         UInt32 iaaConnected;
         UInt32 size = sizeof(iaaConnected);
         AudioUnitGetProperty(THIS->_ioAudioUnit, kAudioUnitProperty_IsInterAppConnected, kAudioUnitScope_Global, 0, &iaaConnected, &size);
+        
         if ( !iaaConnected ) {
             if ( [[UIApplication sharedApplication] applicationState] == UIApplicationStateBackground ) {
                 THIS->_interrupted = YES;
@@ -2462,7 +2456,7 @@ static void interAppConnectedChangeCallback(void *inRefCon, AudioUnit inUnit, Au
         if ( THIS->_inputEnabled ) {
             [THIS updateInputDeviceStatus];
         }
-    }
+    });
 }
 #endif
 
