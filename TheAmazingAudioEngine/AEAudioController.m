@@ -1950,7 +1950,7 @@ BOOL AECurrentThreadIsAudioThread(void) {
 
 #if !TARGET_OS_TV
     if ( [_audioSessionCategory isEqualToString:AVAudioSessionCategoryPlayAndRecord] ) {
-        //options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
+        options |= AVAudioSessionCategoryOptionDefaultToSpeaker;
     }
     options |= _enableBluetoothInput ? AVAudioSessionCategoryOptionAllowBluetooth : 0;
 #endif
